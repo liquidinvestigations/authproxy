@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import sys
+import logging
 import requests
 from paste.proxy import Proxy
 from werkzeug.contrib.fixers import ProxyFix
 import flask
 
 upstream = Proxy('http://127.0.0.1:51358')
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 app = flask.Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -20,7 +23,7 @@ config.from_pyfile('config/oauth.py')
 def authenticate():
     access_token = flask.session.get('access_token')
     if not access_token:
-        print('auth fail - no access token', file=sys.stderr)
+        log.warn('auth fail - no access token')
         return False
 
     profile_url = config['LIQUID_URL'] + '/accounts/profile'
@@ -29,12 +32,12 @@ def authenticate():
     })
 
     if profile_resp.status_code != 200:
-        print('auth fail - profile response: {!r}'.format(profile_resp))
+        log.warn('auth fail - profile response: %r', profile_resp)
         return False
 
     profile = profile_resp.json()
     if not profile:
-        print('auth fail - empty profile: {!r}'.format(profile))
+        log.warn('auth fail - empty profile: %r', profile)
         return False
 
     return True
@@ -52,15 +55,18 @@ def dispatch():
 
 @app.route('/__auth/')
 def login():
-    return flask.redirect(
+    authorize_url = (
         '{}/o/authorize/?response_type=code&client_id={}'
         .format(config['LIQUID_URL'], config['LIQUID_CLIENT_ID'])
     )
+    log.info("oauth - redirecting to authorize url = %r", authorize_url)
+    return flask.redirect(authorize_url)
 
 
 @app.route('/__auth/callback')
 def callback():
     redirect_uri = flask.request.base_url
+    log.info("oauth - getting token, redirect_uri = %r", redirect_uri)
     token_resp = requests.post(
         config['LIQUID_URL'] + '/o/token/',
         data={
@@ -99,5 +105,6 @@ def logout():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     import waitress
     waitress.serve(app, host='127.0.0.1', port=32437)
