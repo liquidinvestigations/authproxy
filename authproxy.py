@@ -14,7 +14,6 @@ app = flask.Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
 config = app.config
-config.from_pyfile('config/basename.py')
 config.from_pyfile('config/secret.py')
 config.from_pyfile('config/oauth.py')
 config.from_pyfile('config/settings.py')
