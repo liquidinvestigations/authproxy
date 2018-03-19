@@ -7,7 +7,6 @@ from paste.proxy import Proxy
 from werkzeug.contrib.fixers import ProxyFix
 import flask
 
-upstream = Proxy('http://127.0.0.1:51358')
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
@@ -18,6 +17,8 @@ config = app.config
 config.from_pyfile('config/basename.py')
 config.from_pyfile('config/secret.py')
 config.from_pyfile('config/oauth.py')
+config.from_pyfile('config/settings.py')
+upstream = Proxy(config['UPSTREAM_APP_URL'])
 
 
 def get_username():
@@ -120,4 +121,4 @@ def logout():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     import waitress
-    waitress.serve(app, host='127.0.0.1', port=32437)
+    waitress.serve(app, host='127.0.0.1', port=app.config['PORT'])
