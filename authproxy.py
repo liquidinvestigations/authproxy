@@ -20,11 +20,12 @@ config.from_pyfile('config/secret.py')
 config.from_pyfile('config/oauth.py')
 
 
-def authenticate():
+def get_username():
     access_token = flask.session.get('access_token')
     if not access_token:
         log.warn('auth fail - no access token')
-        return False
+        flask.session.pop('access_token', None)
+        return None
 
     profile_url = config['LIQUID_URL'] + '/accounts/profile'
     profile_resp = requests.get(profile_url, headers={
@@ -33,21 +34,22 @@ def authenticate():
 
     if profile_resp.status_code != 200:
         log.warn('auth fail - profile response: %r', profile_resp)
-        return False
+        flask.session.pop('access_token', None)
+        return None
 
     profile = profile_resp.json()
     if not profile:
         log.warn('auth fail - empty profile: %r', profile)
-        return False
+        flask.session.pop('access_token', None)
+        return None
 
-    return True
+    return profile['login']
 
 
 @app.before_request
 def dispatch():
     if not flask.request.path.startswith('/__auth/'):
-        if not authenticate():
-            flask.session.pop('access_token', None)
+        if not get_username():
             return flask.redirect('/__auth/')
 
         return upstream
@@ -89,6 +91,17 @@ def callback():
 
     flask.session['access_token'] = token_data['access_token']
     return flask.redirect('/')
+
+
+@app.route('/__auth/token')
+def get_token():
+    username = get_username()
+    if not username:
+        flask.abort(401)
+    return flask.jsonify({
+        'username': username,
+        'access_token': flask.session['access_token'],
+    })
 
 
 LOGGED_OUT = """\
