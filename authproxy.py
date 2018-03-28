@@ -49,8 +49,14 @@ def get_username():
 @app.before_request
 def dispatch():
     if not flask.request.path.startswith('/__auth/'):
-        if not get_username():
+        username = get_username()
+        if not username:
             return flask.redirect('/__auth/')
+
+        USER_HEADER_TEMPLATE = config.get('USER_HEADER_TEMPLATE')
+        if USER_HEADER_TEMPLATE:
+            uservalue = USER_HEADER_TEMPLATE.format(username)
+            flask.request.environ['HTTP_X_FORWARDED_USER'] = uservalue
 
         return upstream
 
