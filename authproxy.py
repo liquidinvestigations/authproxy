@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 import logging
 import requests
 from paste.proxy import Proxy
@@ -13,10 +14,20 @@ log.setLevel(logging.INFO)
 app = flask.Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
+CONFIG_VARS = [
+    'LIQUID_CLIENT_ID',
+    'LIQUID_CLIENT_SECRET',
+    'SECRET_KEY',
+    'UPSTREAM_APP_URL',
+    'LIQUID_PUBLIC_URL',
+    'LIQUID_INTERNAL_URL',
+    'USER_HEADER_TEMPLATE',
+]
+
 config = app.config
-config.from_pyfile('config/secret.py')
-config.from_pyfile('config/oauth.py')
-config.from_pyfile('config/settings.py')
+for name in CONFIG_VARS:
+    config[name] = os.environ.get(name)
+
 upstream = Proxy(config['UPSTREAM_APP_URL'])
 
 
@@ -27,7 +38,7 @@ def get_username():
         flask.session.pop('access_token', None)
         return None
 
-    profile_url = config['LIQUID_URL'] + '/accounts/profile'
+    profile_url = config['LIQUID_INTERNAL_URL'] + '/accounts/profile'
     profile_resp = requests.get(profile_url, headers={
         'Authorization': 'Bearer {}'.format(flask.session['access_token']),
     })
@@ -65,7 +76,7 @@ def dispatch():
 def login():
     authorize_url = (
         '{}/o/authorize/?response_type=code&client_id={}'
-        .format(config['LIQUID_URL'], config['LIQUID_CLIENT_ID'])
+        .format(config['LIQUID_PUBLIC_URL'], config['LIQUID_CLIENT_ID'])
     )
     log.info("oauth - redirecting to authorize url = %r", authorize_url)
     return flask.redirect(authorize_url)
@@ -76,7 +87,7 @@ def callback():
     redirect_uri = flask.request.base_url
     log.info("oauth - getting token, redirect_uri = %r", redirect_uri)
     token_resp = requests.post(
-        config['LIQUID_URL'] + '/o/token/',
+        config['LIQUID_INTERNAL_URL'] + '/o/token/',
         data={
             'redirect_uri': redirect_uri,
             'grant_type': 'authorization_code',
@@ -126,4 +137,4 @@ def logout():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     import waitress
-    waitress.serve(app, host='127.0.0.1', port=app.config['PORT'])
+    waitress.serve(app, host='0.0.0.0', port=5000)
