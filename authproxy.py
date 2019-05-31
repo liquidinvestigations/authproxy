@@ -5,7 +5,7 @@ import os
 import logging
 import requests
 from paste.proxy import Proxy
-from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.middleware.proxy_fix import ProxyFix
 import flask
 
 log = logging.getLogger(__name__)
