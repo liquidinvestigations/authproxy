@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
 import os
 import logging
 import requests
@@ -31,7 +30,7 @@ for name in CONFIG_VARS:
 upstream = Proxy(config['UPSTREAM_APP_URL'])
 
 
-def get_username():
+def get_profile():
     access_token = flask.session.get('access_token')
     if not access_token:
         log.warn('auth fail - no access token')
@@ -54,20 +53,23 @@ def get_username():
         flask.session.pop('access_token', None)
         return None
 
-    return profile['login']
+    return profile
 
 
 @app.before_request
 def dispatch():
     if not flask.request.path.startswith('/__auth/'):
-        username = get_username()
-        if not username:
+        profile = get_profile()
+        if not profile:
             return flask.redirect('/__auth/')
 
         USER_HEADER_TEMPLATE = config.get('USER_HEADER_TEMPLATE')
         if USER_HEADER_TEMPLATE:
-            uservalue = USER_HEADER_TEMPLATE.format(username)
+            uservalue = USER_HEADER_TEMPLATE.format(profile['login'])
             flask.request.environ['HTTP_X_FORWARDED_USER'] = uservalue
+            flask.request.environ['HTTP_X_FORWARDED_USER_FULL_NAME'] = profile['name']
+            flask.request.environ['HTTP_X_FORWARDED_USER_EMAIL'] = profile['email']
+            flask.request.environ['HTTP_X_FORWARDED_USER_ADMIN'] = str(profile['is_admin']).lower()
 
         return upstream
 
@@ -112,11 +114,11 @@ def callback():
 
 @app.route('/__auth/token')
 def get_token():
-    username = get_username()
-    if not username:
+    profile = get_profile()
+    if not profile:
         flask.abort(401)
     return flask.jsonify({
-        'username': username,
+        'username': profile['login'],
         'access_token': flask.session['access_token'],
     })
 
