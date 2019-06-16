@@ -14,18 +14,20 @@ app = flask.Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 CONFIG_VARS = [
+    'DEBUG',
     'LIQUID_CLIENT_ID',
     'LIQUID_CLIENT_SECRET',
     'SECRET_KEY',
     'UPSTREAM_APP_URL',
     'LIQUID_PUBLIC_URL',
     'LIQUID_INTERNAL_URL',
-    'USER_HEADER_TEMPLATE',
 ]
 
 config = app.config
 for name in CONFIG_VARS:
-    config[name] = os.environ.get(name)
+    config[name] = os.environ[name]
+
+config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
 
 upstream = Proxy(config['UPSTREAM_APP_URL'])
 
@@ -132,11 +134,21 @@ LOGGED_OUT = """\
 
 @app.route('/__auth/logout')
 def logout():
-    flask.session.pop('access_token', None)
+    access_token = flask.session.get('access_token', None)
+    if access_token:
+        logout_url = config['LIQUID_INTERNAL_URL'] + '/accounts/logout/'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        logout_resp = requests.get(logout_url, headers=headers)
     return LOGGED_OUT
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    import waitress
-    waitress.serve(app, host='0.0.0.0', port=5000)
+    reload_code = False
+
+    if reload_code:
+        app.run(host='0.0.0.0')
+
+    else:
+        import waitress
+        waitress.serve(app, host='0.0.0.0', port=5000)
