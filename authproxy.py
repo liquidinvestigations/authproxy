@@ -20,12 +20,13 @@ CONFIG_VARS = [
     'UPSTREAM_APP_URL',
     'LIQUID_PUBLIC_URL',
     'LIQUID_INTERNAL_URL',
-    'USER_HEADER_TEMPLATE',
 ]
 
 config = app.config
 for name in CONFIG_VARS:
-    config[name] = os.environ.get(name)
+    config[name] = os.environ[name]
+
+config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
 
 upstream = Proxy(config['UPSTREAM_APP_URL'])
 
