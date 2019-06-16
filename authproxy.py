@@ -14,6 +14,7 @@ app = flask.Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 CONFIG_VARS = [
+    'DEBUG',
     'LIQUID_CLIENT_ID',
     'LIQUID_CLIENT_SECRET',
     'SECRET_KEY',
