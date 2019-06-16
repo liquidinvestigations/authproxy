@@ -144,5 +144,11 @@ def logout():
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    import waitress
-    waitress.serve(app, host='0.0.0.0', port=5000)
+    reload_code = False
+
+    if reload_code:
+        app.run(host='0.0.0.0')
+
+    else:
+        import waitress
+        waitress.serve(app, host='0.0.0.0', port=5000)
