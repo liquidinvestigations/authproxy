@@ -134,7 +134,11 @@ LOGGED_OUT = """\
 
 @app.route('/__auth/logout')
 def logout():
-    flask.session.pop('access_token', None)
+    access_token = flask.session.get('access_token', None)
+    if access_token:
+        logout_url = config['LIQUID_INTERNAL_URL'] + '/accounts/logout/'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        logout_resp = requests.get(logout_url, headers=headers)
     return LOGGED_OUT
 
 
