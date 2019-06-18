@@ -69,7 +69,7 @@ def dispatch():
         if USER_HEADER_TEMPLATE:
             uservalue = USER_HEADER_TEMPLATE.format(profile['login'])
             flask.request.environ['HTTP_X_FORWARDED_USER'] = uservalue
-            flask.request.environ['HTTP_X_FORWARDED_USER_FULL_NAME'] = profile['name']
+            flask.request.environ['HTTP_X_FORWARDED_USER_FULL_NAME'] = profile['name'].encode('utf8')
             flask.request.environ['HTTP_X_FORWARDED_USER_EMAIL'] = profile['email']
             flask.request.environ['HTTP_X_FORWARDED_USER_ADMIN'] = str(profile['is_admin']).lower()
 
