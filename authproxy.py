@@ -28,6 +28,7 @@ for name in CONFIG_VARS:
     config[name] = os.environ[name]
 
 config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
+config['THREADS'] = os.environ.get('THREADS', '4')
 
 upstream = Proxy(config['UPSTREAM_APP_URL'])
 
@@ -151,4 +152,4 @@ if __name__ == '__main__':
 
     else:
         import waitress
-        waitress.serve(app, host='0.0.0.0', port=5000)
+        waitress.serve(app, host='0.0.0.0', port=5000, threads=int(config['THREADS']))
