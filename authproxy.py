@@ -36,7 +36,7 @@ upstream = Proxy(config['UPSTREAM_APP_URL'])
 def get_profile():
     access_token = flask.session.get('access_token')
     if not access_token:
-        log.warn('auth fail - no access token')
+        log.warning('auth fail - no access token')
         flask.session.pop('access_token', None)
         return None
 
@@ -46,13 +46,13 @@ def get_profile():
     })
 
     if profile_resp.status_code != 200:
-        log.warn('auth fail - profile response: %r', profile_resp)
+        log.warning('auth fail - profile response: %r', profile_resp)
         flask.session.pop('access_token', None)
         return None
 
     profile = profile_resp.json()
     if not profile:
-        log.warn('auth fail - empty profile: %r', profile)
+        log.warning('auth fail - empty profile: %r', profile)
         flask.session.pop('access_token', None)
         return None
 
@@ -144,8 +144,13 @@ def logout():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    reload_code = False
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
+    reload_code = True
 
     if reload_code:
         app.run(host='0.0.0.0')
