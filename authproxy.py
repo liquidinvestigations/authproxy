@@ -153,7 +153,7 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S',
     )
 
-    reload_code = True
+    reload_code = False
 
     if reload_code:
         app.run(host='0.0.0.0')
