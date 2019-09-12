@@ -30,6 +30,9 @@ for name in CONFIG_VARS:
 config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
 config['THREADS'] = os.environ.get('THREADS', '4')
 
+config['SESSION_COOKIE_NAME'] = \
+    os.environ.get('SESSION_COOKIE_NAME', 'authproxy.session')
+
 upstream = Proxy(config['UPSTREAM_APP_URL'])
 
 
