@@ -18,9 +18,7 @@ CONFIG_VARS = [
     'LIQUID_CLIENT_ID',
     'LIQUID_CLIENT_SECRET',
     'SECRET_KEY',
-    'UPSTREAM_APP_URL',
     'LIQUID_PUBLIC_URL',
-    'LIQUID_INTERNAL_URL',
 ]
 
 config = app.config
@@ -29,11 +27,67 @@ for name in CONFIG_VARS:
 
 config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
 config['THREADS'] = os.environ.get('THREADS', '4')
+config['CONSUL_URL'] = os.environ.get('CONSUL_URL')
+config['LIQUID_CORE_SERVICE'] = os.environ.get('LIQUID_CORE_SERVICE')
+config['UPSTREAM_SERVICE'] = os.environ.get('UPSTREAM_SERVICE')
+config['LIQUID_INTERNAL_URL'] = os.environ.get('LIQUID_INTERNAL_URL')
+config['UPSTREAM_APP_URL'] = os.environ.get('UPSTREAM_APP_URL')
 
 config['SESSION_COOKIE_NAME'] = \
     os.environ.get('SESSION_COOKIE_NAME', 'authproxy.session')
 
-upstream = Proxy(config['UPSTREAM_APP_URL'])
+
+class ServiceMissing(RuntimeError):
+    pass
+
+
+def consul(url):
+    return requests.get(f"{config['CONSUL_URL']}{url}").json()
+
+
+def consul_service(name):
+    health = {
+        node['ServiceID']: node['Status']
+        for node in consul(f"/v1//health/checks/{name}")
+    }
+
+    for node in consul(f"/v1/catalog/service/{name}"):
+        if health[node['ServiceID']] == 'passing':
+            return f"{node['ServiceAddress']}:{node['ServicePort']}"
+
+    raise ServiceMissing(name)
+
+
+if config['UPSTREAM_APP_URL']:
+    get_upstream = lambda: Proxy(config['UPSTREAM_APP_URL'])
+
+elif config['CONSUL_URL'] and config['UPSTREAM_SERVICE']:
+    def get_upstream():
+        name = config['UPSTREAM_SERVICE']
+
+        try:
+            address = consul_service(name)
+
+        except ServiceMissing:
+            log.warn("No upstream service {name!r} found in consul!")
+            return "Application is not ready.", 502
+
+        return Proxy(f"http://{address}")
+
+if config['LIQUID_INTERNAL_URL']:
+    def get_oauth_server():
+        return config['LIQUID_INTERNAL_URL']
+
+elif config['CONSUL_URL'] and config['LIQUID_CORE_SERVICE']:
+    def get_oauth_server():
+        return f"http://{consul_service(config['LIQUID_CORE_SERVICE'])}"
+
+
+else:
+    raise RuntimeError(
+        "Please configure either `UPSTREAM_APP_URL` or both "
+        "`CONSUL_URL` and `LIQUID_CORE_SERVICE`."
+    )
 
 
 def get_profile():
@@ -43,7 +97,7 @@ def get_profile():
         flask.session.pop('access_token', None)
         return None
 
-    profile_url = config['LIQUID_INTERNAL_URL'] + '/accounts/profile'
+    profile_url = get_oauth_server() + '/accounts/profile'
     profile_resp = requests.get(profile_url, headers={
         'Authorization': 'Bearer {}'.format(flask.session['access_token']),
     })
@@ -77,7 +131,7 @@ def dispatch():
             flask.request.environ['HTTP_X_FORWARDED_USER_EMAIL'] = profile['email']
             flask.request.environ['HTTP_X_FORWARDED_USER_ADMIN'] = str(profile['is_admin']).lower()
 
-        return upstream
+        return get_upstream()
 
 
 @app.route('/__auth/')
@@ -95,7 +149,7 @@ def callback():
     redirect_uri = flask.request.base_url
     log.info("oauth - getting token, redirect_uri = %r", redirect_uri)
     token_resp = requests.post(
-        config['LIQUID_INTERNAL_URL'] + '/o/token/',
+        get_oauth_server() + '/o/token/',
         data={
             'redirect_uri': redirect_uri,
             'grant_type': 'authorization_code',
