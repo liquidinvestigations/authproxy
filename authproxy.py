@@ -121,6 +121,7 @@ def dispatch():
     if not flask.request.path.startswith('/__auth/'):
         profile = get_profile()
         if not profile:
+            flask.session['next'] = flask.request.url
             return flask.redirect('/__auth/')
 
         USER_HEADER_TEMPLATE = config.get('USER_HEADER_TEMPLATE')
@@ -169,7 +170,7 @@ def callback():
         )
 
     flask.session['access_token'] = token_data['access_token']
-    return flask.redirect('/')
+    return flask.redirect(flask.session.get('next', '/'))
 
 
 @app.route('/__auth/token')
