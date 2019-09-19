@@ -70,7 +70,7 @@ elif config['CONSUL_URL'] and config['UPSTREAM_SERVICE']:
 
         except ServiceMissing:
             log.warn("No upstream service {name!r} found in consul!")
-            return "Application is not ready.", 502
+            return "Authproxy 502: Application is not ready.", 502
 
         return Proxy(f"http://{address}")
 
