@@ -19,6 +19,9 @@ CONFIG_VARS = [
     'LIQUID_CLIENT_SECRET',
     'SECRET_KEY',
     'LIQUID_PUBLIC_URL',
+    'CONSUL_URL',
+    'LIQUID_CORE_SERVICE',
+    'UPSTREAM_SERVICE',
 ]
 
 config = app.config
@@ -27,11 +30,6 @@ for name in CONFIG_VARS:
 
 config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
 config['THREADS'] = os.environ.get('THREADS', '4')
-config['CONSUL_URL'] = os.environ.get('CONSUL_URL')
-config['LIQUID_CORE_SERVICE'] = os.environ.get('LIQUID_CORE_SERVICE')
-config['UPSTREAM_SERVICE'] = os.environ.get('UPSTREAM_SERVICE')
-config['LIQUID_INTERNAL_URL'] = os.environ.get('LIQUID_INTERNAL_URL')
-config['UPSTREAM_APP_URL'] = os.environ.get('UPSTREAM_APP_URL')
 
 config['SESSION_COOKIE_NAME'] = \
     os.environ.get('SESSION_COOKIE_NAME', 'authproxy.session')
@@ -58,36 +56,21 @@ def consul_service(name):
     raise ServiceMissing(name)
 
 
-if config['UPSTREAM_APP_URL']:
-    get_upstream = lambda: Proxy(config['UPSTREAM_APP_URL'])
+def get_upstream():
+    name = config['UPSTREAM_SERVICE']
 
-elif config['CONSUL_URL'] and config['UPSTREAM_SERVICE']:
-    def get_upstream():
-        name = config['UPSTREAM_SERVICE']
+    try:
+        address = consul_service(name)
 
-        try:
-            address = consul_service(name)
+    except ServiceMissing:
+        log.warn("No upstream service {name!r} found in consul!")
+        return "Authproxy 502: Application is not ready.", 502
 
-        except ServiceMissing:
-            log.warn("No upstream service {name!r} found in consul!")
-            return "Authproxy 502: Application is not ready.", 502
-
-        return Proxy(f"http://{address}")
-
-if config['LIQUID_INTERNAL_URL']:
-    def get_oauth_server():
-        return config['LIQUID_INTERNAL_URL']
-
-elif config['CONSUL_URL'] and config['LIQUID_CORE_SERVICE']:
-    def get_oauth_server():
-        return f"http://{consul_service(config['LIQUID_CORE_SERVICE'])}"
+    return Proxy(f"http://{address}")
 
 
-else:
-    raise RuntimeError(
-        "Please configure either `UPSTREAM_APP_URL` or both "
-        "`CONSUL_URL` and `LIQUID_CORE_SERVICE`."
-    )
+def get_oauth_server():
+    return f"http://{consul_service(config['LIQUID_CORE_SERVICE'])}"
 
 
 def get_profile():
@@ -210,6 +193,7 @@ if __name__ == '__main__':
 
     reload_code = False
 
+    log.info(f"Authproxy for {config['UPSTREAM_SERVICE']} starting")
     if reload_code:
         app.run(host='0.0.0.0')
 
