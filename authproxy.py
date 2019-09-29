@@ -35,6 +35,14 @@ config['SESSION_COOKIE_NAME'] = \
     os.environ.get('SESSION_COOKIE_NAME', 'authproxy.session')
 
 
+class ProxyUTF8(Proxy):
+    def __call__(self, environ, start_response):
+        path_info = environ['PATH_INFO']
+        decoded_path_info = bytes(path_info, 'latin-1')
+        environ['PATH_INFO'] = str(decoded_path_info, 'utf-8')
+        return super(ProxyUTF8, self).__call__(environ, start_response)
+
+
 class ServiceMissing(RuntimeError):
     pass
 
@@ -66,7 +74,7 @@ def get_upstream():
         log.warn("No upstream service {name!r} found in consul!")
         return "Authproxy 502: Application is not ready.", 502
 
-    return Proxy(f"http://{address}")
+    return ProxyUTF8(f"http://{address}")
 
 
 def get_oauth_server():
