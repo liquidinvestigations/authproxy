@@ -90,7 +90,7 @@ def get_oauth_server():
 def get_profile():
     access_token = flask.session.get('access_token')
     if not access_token:
-        log.warning('auth fail - no access token')
+        log.debug('auth fail - no access token')
         flask.session.pop('access_token', None)
         return None
 
@@ -138,14 +138,14 @@ def login():
         '{}/o/authorize/?response_type=code&client_id={}'
         .format(config['LIQUID_PUBLIC_URL'], config['LIQUID_CLIENT_ID'])
     )
-    log.info("oauth - redirecting to authorize url = %r", authorize_url)
+    log.debug("oauth - redirecting to authorize url = %r", authorize_url)
     return flask.redirect(authorize_url)
 
 
 @app.route('/__auth/callback')
 def callback():
     redirect_uri = flask.request.base_url
-    log.info("oauth - getting token, redirect_uri = %r", redirect_uri)
+    log.debug("oauth - getting token, redirect_uri = %r", redirect_uri)
     token_resp = requests.post(
         get_oauth_server() + '/o/token/',
         data={
