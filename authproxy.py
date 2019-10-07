@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-import os
 import logging
-import requests
+import os
+import random
+
 from paste.proxy import Proxy
 from werkzeug.middleware.proxy_fix import ProxyFix
 import flask
+import requests
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -57,9 +59,13 @@ def consul_service(name):
         for node in consul(f"/v1//health/checks/{name}")
     }
 
+    passing = []
     for node in consul(f"/v1/catalog/service/{name}"):
         if health[node['ServiceID']] == 'passing':
-            return f"{node['ServiceAddress']}:{node['ServicePort']}"
+            passing.append(f"{node['ServiceAddress']}:{node['ServicePort']}")
+
+    if passing:
+        return random.choice(passing)
 
     raise ServiceMissing(name)
 
