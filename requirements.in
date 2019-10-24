@@ -1,4 +1,6 @@
 requests
 flask
 paste
+pytest
+responses
 waitress

@@ -27,14 +27,6 @@ CONFIG_VARS = [
 ]
 
 config = app.config
-for name in CONFIG_VARS:
-    config[name] = os.environ[name]
-
-config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
-config['THREADS'] = os.environ.get('THREADS', '4')
-
-config['SESSION_COOKIE_NAME'] = \
-    os.environ.get('SESSION_COOKIE_NAME', 'authproxy.session')
 
 
 class ProxyUTF8(Proxy):
@@ -56,7 +48,7 @@ def consul(url):
 def consul_service(name):
     health = {
         node['ServiceID']: node['Status']
-        for node in consul(f"/v1//health/checks/{name}")
+        for node in consul(f"/v1/health/checks/{name}")
     }
 
     passing = []
@@ -77,7 +69,7 @@ def get_upstream():
         address = consul_service(name)
 
     except ServiceMissing:
-        log.warn("No upstream service {name!r} found in consul!")
+        log.warning("No upstream service {name!r} found in consul!")
         return "Authproxy 502: Application is not ready.", 502
 
     return ProxyUTF8(f"http://{address}")
@@ -194,11 +186,24 @@ def logout():
     if access_token:
         logout_url = get_oauth_server() + '/accounts/logout/'
         headers = {'Authorization': f'Bearer {access_token}'}
-        logout_resp = requests.get(logout_url, headers=headers)
+        requests.get(logout_url, headers=headers)
     return LOGGED_OUT
 
 
+def init_config():
+    for name in CONFIG_VARS:
+        config[name] = os.environ[name]
+
+    config['USER_HEADER_TEMPLATE'] = os.environ.get('USER_HEADER_TEMPLATE')
+    config['THREADS'] = os.environ.get('THREADS', '4')
+
+    config['SESSION_COOKIE_NAME'] = \
+        os.environ.get('SESSION_COOKIE_NAME', 'authproxy.session')
+
+
 if __name__ == '__main__':
+    init_config()
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s %(levelname)s %(message)s',
