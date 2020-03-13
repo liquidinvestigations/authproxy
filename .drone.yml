@@ -3,13 +3,13 @@ name: test
 
 steps:
 - name: flake8
-  image: python:3.7-stretch
+  image: python:3.8-buster
   commands:
   - pip install flake8 > /dev/null
   - flake8 || true  # not now
 
 - name: testsuite
-  image: python:3.7-stretch
+  image: python:3.8-buster
   depends_on:
   - flake8
   commands:
