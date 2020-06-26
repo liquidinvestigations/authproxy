@@ -6,6 +6,8 @@ WORKDIR /app
 ADD requirements.txt ./
 RUN pip install -r requirements.txt
 
+
+## Add user ##
 COPY . .
 
 ENV PYTHONUNBUFFERED 1
