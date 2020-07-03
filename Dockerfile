@@ -8,6 +8,8 @@ RUN pip install -r requirements.txt
 
 
 ## Add user ##
+USER 1000
+
 COPY . .
 
 ENV PYTHONUNBUFFERED 1
