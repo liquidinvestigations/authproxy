@@ -12,7 +12,7 @@ WORKDIR /app
 ADD requirements.txt ./
 RUN pip install -r requirements.txt
 
-USER test_user
+USER testuser
 
 COPY . .
 
