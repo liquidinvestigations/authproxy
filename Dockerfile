@@ -1,6 +1,6 @@
 FROM python:3.8-buster
 
-ARG UNAME=testuser
+ARG UNAME=liquid
 ARG UID=666
 ARG GID=666
 RUN groupadd -g $GID -o $UNAME
@@ -12,7 +12,7 @@ WORKDIR /app
 ADD requirements.txt ./
 RUN pip install -r requirements.txt
 
-USER testuser
+USER 666
 
 COPY . .
 
